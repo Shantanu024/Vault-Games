@@ -350,7 +350,3 @@ VITE_SERVER_URL=http://localhost:5000
 ```
 
 ---
-
-## 📄 License
-
-MIT — build freely, modify freely.
