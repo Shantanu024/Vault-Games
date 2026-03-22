@@ -1,0 +1,155 @@
+// VaultGames Prisma Schema
+// PostgreSQL - handles auth, friendships, game history, leaderboards
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String
+  avatarUrl     String?
+  displayName   String?
+  bio           String?
+  country       String?
+  coins         Int       @default(1000)
+  isProfileComplete Boolean @default(false)
+  isOnline      Boolean   @default(false)
+  lastSeen      DateTime  @default(now())
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  sentRequests      Friendship[]  @relation("Requester")
+  receivedRequests  Friendship[]  @relation("Addressee")
+  gameParticipations GameParticipant[]
+  gameHistory       GameHistory[] @relation("GameHistory")
+  chatMessages      ChatMessage[] @relation("ChatMessages")
+  refreshTokens     RefreshToken[]
+
+  @@map("users")
+}
+
+model Friendship {
+  id          String           @id @default(uuid())
+  requesterId String
+  addresseeId String
+  status      FriendshipStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  requester   User @relation("Requester", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee   User @relation("Addressee", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@map("friendships")
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+model GameSession {
+  id          String      @id @default(uuid())
+  gameType    GameType
+  status      GameStatus  @default(WAITING)
+  roomCode    String      @unique
+  hostId      String
+  maxPlayers  Int         @default(6)
+  settings    Json        @default("{}")
+  winnerId    String?
+  startedAt   DateTime?
+  endedAt     DateTime?
+  createdAt   DateTime    @default(now())
+
+  participants GameParticipant[]
+
+  @@map("game_sessions")
+}
+
+model GameParticipant {
+  id          String   @id @default(uuid())
+  sessionId   String
+  userId      String
+  score       Int      @default(0)
+  isEliminated Boolean @default(false)
+  rank        Int?
+  joinedAt    DateTime @default(now())
+
+  session  GameSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, userId])
+  @@map("game_participants")
+}
+
+enum GameType {
+  MINES
+  WORD_JUMBLE
+}
+
+enum GameStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model GameHistory {
+  id             String   @id @default(uuid())
+  userId         String
+  gameType       GameType
+  score          Int
+  result         GameResult
+  durationSeconds Int
+  coinsEarned    Int
+  playedAt       DateTime @default(now())
+
+  user User @relation("GameHistory", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([gameType])
+  @@index([playedAt])
+  @@map("game_history")
+}
+
+enum GameResult {
+  WIN
+  LOSE
+  DRAW
+}
+
+model ChatMessage {
+  id        String   @id @default(uuid())
+  userId    String
+  content   String
+  role      String   // "user" or "assistant"
+  timestamp DateTime @default(now())
+
+  user User? @relation("ChatMessages", fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([timestamp])
+  @@map("chat_messages")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}

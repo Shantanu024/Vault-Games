@@ -1,0 +1,137 @@
+version: '3.9'
+
+# ═══════════════════════════════════════════════════════════════
+# VaultGames Production Docker Compose Configuration
+# ═══════════════════════════════════════════════════════════════
+# 
+# USAGE:
+#   1. Update .env.production with your production values
+#   2. Run: docker-compose -f docker-compose.prod.yml up -d
+#   3. Check logs: docker-compose -f docker-compose.prod.yml logs -f
+#
+
+services:
+  # ── PostgreSQL Database ──
+  postgres:
+    image: postgres:16-alpine
+    container_name: vault_postgres_prod
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vaultgames_secret}
+      POSTGRES_DB: vaultgames
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vaultgames-network
+    security_opt:
+      - no-new-privileges:true
+
+  # ── Redis Cache ──
+  redis:
+    image: redis:7-alpine
+    container_name: vault_redis_prod
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass ${REDIS_PASSWORD:-redis_prod_password}
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data_prod:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - vaultgames-network
+    security_opt:
+      - no-new-privileges:true
+
+  # ── Backend API Server ──
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: vault_server_prod
+    restart: always
+    expose:
+      - '5000'
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-vaultgames_secret}@postgres:5432/vaultgames
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_prod_password}@redis:6379
+      CLIENT_URL: ${CLIENT_URL:-https://yourdomain.com}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_ACCESS_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      EMAIL_HOST: ${EMAIL_HOST}
+      EMAIL_PORT: ${EMAIL_PORT}
+      EMAIL_USER: ${EMAIL_USER}
+      EMAIL_PASS: ${EMAIL_PASS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:5000/api/auth/me']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - vaultgames-network
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+
+  # ── Nginx Reverse Proxy & Frontend ──
+  nginx:
+    image: nginx:alpine
+    container_name: vault_nginx_prod
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./client/dist:/usr/share/nginx/html:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - server
+    healthcheck:
+      test: ['CMD', 'wget', '--quiet', '--tries=1', '--spider', 'http://localhost:80/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - vaultgames-network
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  vaultgames-network:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
