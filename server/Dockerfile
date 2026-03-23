@@ -1,9 +1,8 @@
 # ── Stage 1: Build ──
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 
-# Install OpenSSL 1.1 for Prisma compatibility
-RUN apk add --no-cache openssl=1.1.1w-r4 openssl-dev
+# Install build dependencies (openssl-dev not needed in slim, already includes openssl)
 
 # Install dependencies
 COPY package*.json ./
@@ -15,14 +14,11 @@ RUN npx prisma generate
 RUN npm run build
 
 # ── Stage 2: Production ──
-FROM node:20-alpine AS production
+FROM node:20-slim AS production
 WORKDIR /app
 
-# Install OpenSSL 1.1 for Prisma compatibility
-RUN apk add --no-cache openssl=1.1.1w-r4
-
-# Security: run as non-root
-RUN addgroup -g 1001 -S nodejs && adduser -S vaultgames -u 1001
+# Security: run as non-root (Debian uses useradd instead of adduser)
+RUN useradd --create-home --uid 1001 vaultgames
 
 # Install only production deps
 COPY package*.json ./
