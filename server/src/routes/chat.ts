@@ -74,16 +74,22 @@ router.post('/message', chatLimiter, authenticate, async (req: AuthRequest, res:
       });
     }
 
-    // Convert messages to Gemini format
-    const geminiMessages = validMessages.map((m: any) => ({
-      role: m.role === 'assistant' ? 'model' : 'user', // Gemini uses 'model' instead of 'assistant'
-      parts: [{ text: m.content }],
-    }));
+    // Convert messages to Gemini format (add system prompt as first message)
+    const geminiMessages: Array<{ role: 'model' | 'user'; parts: Array<{ text: string }> }> = [
+      { role: 'user', parts: [{ text: SYSTEM_PROMPT }] },
+      { role: 'model', parts: [{ text: 'Understood. I am VaultBot, your AI assistant for VaultGames.' }] },
+      ...validMessages.map((m: any) => {
+        const role: 'model' | 'user' = m.role === 'assistant' ? 'model' : 'user';
+        return {
+          role,
+          parts: [{ text: m.content }],
+        };
+      }),
+    ];
 
     // Call Gemini API
     const response = await model.generateContent({
       contents: geminiMessages,
-      systemInstruction: SYSTEM_PROMPT,
       generationConfig: {
         maxOutputTokens: 512,
         temperature: 0.7,
