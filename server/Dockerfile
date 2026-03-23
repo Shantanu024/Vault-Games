@@ -31,13 +31,14 @@ RUN npm install --legacy-peer-deps --only=production && npm cache clean --force
 # Install Prisma CLI (needed for migrations)
 RUN npm install --legacy-peer-deps --save-dev prisma@^5.14.0
 
-# Copy built files and prisma
+# Copy built files, prisma schema, and startup script
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY prisma ./prisma
+COPY start.sh ./start.sh
 
-# Run migrations (as root, for permissions)
-RUN npx prisma migrate deploy || true
+# Make startup script executable
+RUN chmod +x ./start.sh
 
 # Fix permissions for non-root user
 RUN chown -R 1001:1001 /app
@@ -49,4 +50,4 @@ EXPOSE 5000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD wget -q --spider http://localhost:5000/health || exit 1
 
-CMD ["node", "dist/index.js"]
+CMD ["./start.sh"]
