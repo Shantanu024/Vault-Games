@@ -7,7 +7,6 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 
-import { connectMongoDB } from './config/mongodb';
 import { connectRedis } from './config/redis';
 import { prisma } from './config/prisma';
 
@@ -114,7 +113,6 @@ async function bootstrap() {
     await prisma.$connect();
     console.log('✅ PostgreSQL connected');
 
-    await connectMongoDB();
     await connectRedis();
 
     httpServer.listen(PORT, () => {
