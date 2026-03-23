@@ -31,7 +31,7 @@ Before starting deployment, complete this checklist:
 - [ ] Shell access to server (SSH)
 
 **Third-Party Accounts & Credentials:**
-- [ ] Anthropic API key (for AI chatbot) - https://console.anthropic.com
+- [ ] Google Cloud API key (for AI chatbot) - https://console.cloud.google.com
 - [ ] Cloudinary account (for image uploads) - https://cloudinary.com
 - [ ] Email service credentials:
   - [ ] Gmail with app password, OR
@@ -258,8 +258,8 @@ CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
 
-# ──── Anthropic (AI Chatbot) ────
-ANTHROPIC_API_KEY=sk-ant-your_anthropic_api_key_here
+# ──── Google Gemini AI (AI Chatbot) ────
+GOOGLE_API_KEY=AIzaSyD-your_google_api_key_here
 
 # ──── Frontend Client URL ────
 CLIENT_URL=https://yourdomain.com

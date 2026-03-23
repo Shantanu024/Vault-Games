@@ -61,7 +61,7 @@ vaultgames/
 | Cache / RT   | Redis (sessions, OTPs, room state, presence)        |
 | File Storage | Cloudinary (avatar images)                          |
 | Email        | Nodemailer (Gmail SMTP / Resend API)                |
-| AI Helpdesk  | Anthropic Claude Haiku via SDK                      |
+| AI Helpdesk  | Google Gemini 1.5 Flash via SDK                     |
 | Hosting      | Railway or Render (recommended)                     |
 | CI/CD        | GitHub Actions                                      |
 | Containers   | Docker + Docker Compose + Nginx                     |
@@ -112,7 +112,7 @@ Edit `server/.env` and fill in:
 | `CLOUDINARY_CLOUD_NAME` | From cloudinary.com dashboard |
 | `CLOUDINARY_API_KEY` | From cloudinary.com dashboard |
 | `CLOUDINARY_API_SECRET` | From cloudinary.com dashboard |
-| `ANTHROPIC_API_KEY` | From console.anthropic.com |
+| `GOOGLE_API_KEY` | From console.cloud.google.com (Generative AI API) |
 | `CLIENT_URL` | `http://localhost:5173` |
 
 ### 3. Start databases with Docker
@@ -337,7 +337,7 @@ EMAIL_FROM=VaultGames <noreply@vaultgames.gg>
 CLOUDINARY_CLOUD_NAME=...
 CLOUDINARY_API_KEY=...
 CLOUDINARY_API_SECRET=...
-ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=AIzaSyD...
 CLIENT_URL=http://localhost:5173
 OTP_EXPIRY_MINUTES=10
 OTP_MAX_ATTEMPTS=3

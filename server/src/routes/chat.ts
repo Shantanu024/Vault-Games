@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from 'express';
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { rateLimit } from 'express-rate-limit';
 import { sendSuccess, sendError } from '../middleware/errorHandler';
@@ -12,7 +12,8 @@ import {
 } from '../services/chatService';
 
 const router = Router();
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY || '');
+const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -73,16 +74,23 @@ router.post('/message', chatLimiter, authenticate, async (req: AuthRequest, res:
       });
     }
 
-    const response = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 512,
-      system: SYSTEM_PROMPT,
-      messages: validMessages,
+    // Convert messages to Gemini format
+    const geminiMessages = validMessages.map((m: any) => ({
+      role: m.role === 'assistant' ? 'model' : 'user', // Gemini uses 'model' instead of 'assistant'
+      parts: [{ text: m.content }],
+    }));
+
+    // Call Gemini API
+    const response = await model.generateContent({
+      contents: geminiMessages,
+      systemInstruction: SYSTEM_PROMPT,
+      generationConfig: {
+        maxOutputTokens: 512,
+        temperature: 0.7,
+      },
     });
 
-    const reply = response.content[0].type === 'text'
-      ? response.content[0].text
-      : 'I encountered an issue. Please try again.';
+    const reply = response.response.text() || 'I encountered an issue. Please try again.';
 
     // Save assistant's response (fire-and-forget)
     saveChatMessage({
