@@ -2,7 +2,8 @@
 FROM node:20-slim AS builder
 WORKDIR /app
 
-# Install build dependencies (openssl-dev not needed in slim, already includes openssl)
+# Install OpenSSL for Prisma (required in Debian-based images)
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Install dependencies
 COPY package*.json ./
@@ -16,6 +17,9 @@ RUN npm run build
 # ── Stage 2: Production ──
 FROM node:20-slim AS production
 WORKDIR /app
+
+# Install OpenSSL for Prisma
+RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
 
 # Security: run as non-root (Debian uses useradd instead of adduser)
 RUN useradd --create-home --uid 1001 vaultgames
