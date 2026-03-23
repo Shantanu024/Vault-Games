@@ -28,6 +28,9 @@ RUN useradd --create-home --uid 1001 vaultgames
 COPY package*.json ./
 RUN npm install --legacy-peer-deps --only=production && npm cache clean --force
 
+# Also install Prisma CLI (needed for migrations at runtime)
+RUN npm install --legacy-peer-deps --save-dev prisma@^5.14.0
+
 # Copy built files and prisma
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
